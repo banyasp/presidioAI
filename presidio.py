@@ -16,4 +16,5 @@ print(
 print(
     f"Shape of sentence embedding (batch_size, hidden_size): {sentence_embedding.shape}"
 )
+print(f"Sentence Embdding: {sentence_embedding}")
 print("\nLegal-BERT successfully generated the sentence embedding.")
