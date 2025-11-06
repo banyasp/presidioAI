@@ -8,4 +8,4 @@ source ./.venv/bin/activate
 
 ### Add Dependency
 
-uv install \<dependency\>
+uv pip install \<dependency\>
