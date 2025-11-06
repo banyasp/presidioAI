@@ -1,57 +1,41 @@
 import re
-import requests
-from bs4 import BeautifulSoup
 from typing import List, Set
 
 
-def extract_case_mentions(url: str) -> List[str]:
+def extract_case_mentions_from_text(document_text: str) -> List[str]:
     """
-    Fetches the text from a legal document URL and extracts a unique, sorted
+    Takes the raw text of a legal document and extracts a unique, sorted
     list of all potential case names mentioned (e.g., 'Marbury v. Madison').
+
+    Args:
+        document_text: The full text of the legal document as a string.
+
+    Returns:
+        A sorted list of unique potential case names.
     """
-    print(f"Fetching document from: {url}")
+    print("Starting case mention extraction from document text...")
 
-    # Set a User-Agent to mimic a web browser, which helps prevent blocks
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Upgrade-Insecure-Requests": "1",
-    }
-
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        # Raise an exception for bad status codes (4xx or 5xx)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching the URL: {e}")
-        return []
-
-    # Parse the HTML content
-    soup = BeautifulSoup(response.content, "html.parser")
-
-    # --- Step 1: Isolate the main text ---
-    main_content = soup.find("article") or soup.find("main") or soup.find("body")
-    document_text = main_content.get_text() if main_content else soup.get_text()
-
-    # --- Step 2: EXTRACT POTENTIAL CASE NAMES USING GENERIC REGEX WITH LOOKAHEAD ---
+    # --- Step 1: EXTRACT POTENTIAL CASE NAMES USING GENERIC REGEX WITH LOOKAHEAD ---
 
     # Regex components:
+    # Captures a name/phrase starting with a capital letter, followed by 'v.'
     PLAINTIFF_PATTERN = r"([A-Z][a-z]+(?: [A-Z][a-z]+)*)"
+    # Captures a name/phrase for the defendant
     DEFENDANT_PATTERN = r"([A-Z][a-z]+(?: [a-z]+)?(?: [A-Z][a-z]+)*)"
-    # Requires the match to be followed by punctuation, a digit (citation), or a newline.
+    # Requires the match to be followed by a closing character (punctuation, digit/citation, or a newline).
     LOOKAHEAD = r"(?=[.,;:\?!)]|\s\d|\n)"
 
-    # CORRECTED CONCATENATION: Use '+' to join the string variables and literals.
     case_name_pattern = re.compile(
-        PLAINTIFF_PATTERN + r"\s+v\.?\s+" + DEFENDANT_PATTERN + LOOKAHEAD, re.MULTILINE
+        # Matches 'Plaintiff v. Defendant' (with optional dot after v)
+        PLAINTIFF_PATTERN + r"\s+v\.?\s+" + DEFENDANT_PATTERN + LOOKAHEAD,
+        re.MULTILINE,
     )
 
     all_name_parts = case_name_pattern.findall(document_text)
 
-    # --- Step 3: Reconstruct, Clean, and Deduplicate ---
+    # --- Step 2: Reconstruct, Clean, and Deduplicate ---
     mentioned_cases: Set[str] = set()
+    # Placeholder for the case being analyzed itself (to avoid self-citation)
     CURRENT_CASE_NAME = "GIDEON V. WAINWRIGHT"
     EXCLUSION_PREFIXES = re.compile(r"^(In|The|A)\s+", re.IGNORECASE)
 
@@ -66,10 +50,10 @@ def extract_case_mentions(url: str) -> List[str]:
         if re.search(r"\b(Id|See|E\.g)\b", cleaned_name, re.IGNORECASE):
             continue
 
-        # 3. Filter prefixes like 'In' that create duplicates
+        # 3. Filter common legal prefixes like 'In' that create duplicates
         cleaned_name = EXCLUSION_PREFIXES.sub("", cleaned_name)
 
-        # 4. Filter the current case being analyzed
+        # 4. Filter the current case being analyzed (if defined)
         if cleaned_name.upper() != CURRENT_CASE_NAME:
             mentioned_cases.add(cleaned_name)
 
@@ -79,11 +63,27 @@ def extract_case_mentions(url: str) -> List[str]:
 
 # --- Example Usage ---
 
-# Example URL: The full text of the Supreme Court opinion for 'Gideon v. Wainwright'
-GIDEON_V_WAINWRIGHT_OPINION_URL = "https://supreme.justia.com/cases/federal/us/372/335/"
-
 if __name__ == "__main__":
-    citations_list = extract_case_mentions(GIDEON_V_WAINWRIGHT_OPINION_URL)
+    # Simulate fetching and cleaning the text from a legal document
+    EXAMPLE_DOCUMENT_TEXT = """
+    This case, Gideon v. Wainwright, involves a fundamental question of due process.
+    The prior case of Betts v. Brady established a complex rule regarding the appointment
+    of counsel. This contrasts sharply with Powell v. Alabama, which mandated counsel
+    in capital cases. The court in Mapp v. Ohio affirmed the exclusionary rule's application
+    to the states. See also the arguments in Escobedo v. Illinois.
+    The issue presented is reminiscent of earlier debates. We must overrule Betts v. Brady.
+    A ruling in favor of Gideon v. Wainwright would clarify prior decisions. (Id. at 350).
+    Treating due process as "a concept less rigid and more fluid than those envisaged in 
+    other specific and particular provisions of the Bill of Rights," the Court held that refusal
+    to appoint counsel under the particular facts and circumstances in the Betts case was not so 
+    "offensive to the common and fundamental ideas of fairness" as to amount to a denial of due process. 
+    Since the facts and circumstances of the two cases are so nearly indistinguishable, 
+    we think the Betts v. Brady holding, if left standing, would require us to reject Gideon's claim 
+    that the Constitution guarantees him the assistance of counsel. Upon full reconsideration, we conclude 
+    that Betts v. Brady should be overruled.
+    """
+
+    citations_list = extract_case_mentions_from_text(EXAMPLE_DOCUMENT_TEXT)
 
     print("\n" + "=" * 70)
     print("  List of Potential Case Names Mentioned (e.g., 'Roe v. Wade')")
