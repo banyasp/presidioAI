@@ -73,6 +73,7 @@ if __name__ == "__main__":
     to the states. See also the arguments in Escobedo v. Illinois.
     The issue presented is reminiscent of earlier debates. We must overrule Betts v. Brady.
     A ruling in favor of Gideon v. Wainwright would clarify prior decisions. (Id. at 350).
+
     Treating due process as "a concept less rigid and more fluid than those envisaged in 
     other specific and particular provisions of the Bill of Rights," the Court held that refusal
     to appoint counsel under the particular facts and circumstances in the Betts case was not so 
@@ -81,6 +82,15 @@ if __name__ == "__main__":
     we think the Betts v. Brady holding, if left standing, would require us to reject Gideon's claim 
     that the Constitution guarantees him the assistance of counsel. Upon full reconsideration, we conclude 
     that Betts v. Brady should be overruled.
+
+    E.g., Gitlow v. New York, 268 U. S. 652, 268 U. S. 666 (1925) (speech and press);
+    Lovell v. City of Griffin, 303 U. S. 444, 303 U. S. 450 (1938) (speech and press); 
+    Staub v. City of Baxley, 355 U. S. 313, 355 U. S. 321 (1958) (speech); Grosjean v. American Press Co., 
+    297 U. S. 233, 297 U. S. 244 (1936) (press); Cantwell v. Connecticut, 310 U. S. 296, 310 U. S. 303 (1940) 
+    (religion); De Jonge v. Oregon, 299 U. S. 353, 299 U. S. 364 (1937) (assembly); Shelton v. Tucker, 364 U. S. 
+    479, 364 U. S. 486, 488 (1960) (association); Louisiana ex rel. Gremillion v. NAACP, 366 U. S. 293, 366 U. S. 
+    296 (1961) (association); Edwards v. South Carolina, 372 U. S. 229 (1963) (speech, assembly, petition for 
+    redress of grievances).
     """
 
     citations_list = extract_case_mentions_from_text(EXAMPLE_DOCUMENT_TEXT)
