@@ -21,7 +21,8 @@ def extract_case_mentions_from_text(document_text: str) -> List[str]:
     # Captures a name/phrase starting with a capital letter, followed by 'v.'
     PLAINTIFF_PATTERN = r"([A-Z][a-z]+(?: [A-Z][a-z]+)*)"
     # Captures a name/phrase for the defendant
-    DEFENDANT_PATTERN = r"([A-Z][a-z]+(?: [a-z]+)?(?: [A-Z][a-z]+)*)"
+    # Only allows specific connector words (of, the, and, for, in) that are legitimately part of case names
+    DEFENDANT_PATTERN = r"([A-Z][a-z]+(?:(?: (?:of|the|and|for|in))? [A-Z][a-z]+)*)"
     # Requires the match to be followed by a closing character (punctuation, digit/citation, or a newline).
     LOOKAHEAD = r"(?=[.,;:\?!)]|\s\d|\n)"
 
