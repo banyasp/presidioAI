@@ -13,10 +13,11 @@ import fitz  # PyMuPDF
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 LOG = logging.getLogger("scotus")
 
-# Default index URLs to scrape
+# Default index URLs to scrape: years 24 down to 17 (inclusive).
+# This covers the slip opinion index pages for those Court terms.
 DEFAULT_INDEX_URLS = [
-    "https://www.supremecourt.gov/opinions/slipopinion/24",
-    "https://www.supremecourt.gov/opinions/slipopinion/23",
+    f"https://www.supremecourt.gov/opinions/slipopinion/{y}"
+    for y in range(24, 16, -1)
 ]
 BASE = "https://www.supremecourt.gov"
 
@@ -174,10 +175,8 @@ def extract_structured_from_pdf(pdf_bytes, title_hint=None):
     case_facts = _clean(joined_text[syl_start:held_abs_start])
 
     after_held = joined_text[held_abs_end:]
-    m_op = re.search(
-        r"\n\s*(Justice\s+[A-Z][A-Za-z.\-]+?\s+delivered the opinion of the Court\.|Per Curiam\.)",
-        after_held
-    )
+    m_op = re.search(r"delivered\s+the\s+opinion\s+of\s+the\s+Court", after_held, flags=re.I)
+
     region = after_held[:m_op.start()] if m_op else after_held
     paras = [p.strip() for p in re.split(r"\n\s*\n", region) if p.strip()]
     decision = _clean(paras[0]) if paras else ""
@@ -290,8 +289,8 @@ def main():
     ap.add_argument(
         "--per-index-limit",
         type=int,
-        default=20,
-        help="Max cases to process per index URL",
+        default=None,
+        help="Max cases to process per index URL (omit for no limit)",
     )
     args = ap.parse_args()
 
