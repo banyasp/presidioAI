@@ -1,14 +1,26 @@
 import re
 import io
 import os
+import json
 import sqlite3
 import argparse
 import logging
+from pathlib import Path
+import sys
+from urllib.parse import urlparse
 from datetime import datetime
+
+# Ensure the repo root and scraper dir are on sys.path so utils imports resolve
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(ROOT.parent) not in sys.path:
+    sys.path.insert(0, str(ROOT.parent))
 
 import requests
 from bs4 import BeautifulSoup
 import fitz  # PyMuPDF
+from case_mention_extractor import extract_case_mentions_from_text
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 LOG = logging.getLogger("scotus")
@@ -181,6 +193,17 @@ def extract_structured_from_pdf(pdf_bytes, title_hint=None):
     paras = [p.strip() for p in re.split(r"\n\s*\n", region) if p.strip()]
     decision = _clean(paras[0]) if paras else ""
 
+    opinion_tail = after_held[m_op.end():] if m_op else ""
+    case_mentions = []
+    related_cases = []
+    if opinion_tail:
+        LOG.info("Passing opinion text to case_mention_extractor for %s", title_hint or "")
+        case_mentions = extract_case_mentions_from_text(opinion_tail)
+        LOG.info("Found %d case mention(s) in %s: %s", len(case_mentions), title_hint or "", case_mentions)
+        related_cases = case_mentions
+    else:
+        LOG.info("No opinion tail found after 'delivered the opinion of the Court' for %s", title_hint or "")
+
     if not case_facts or not decision:
         return None
 
@@ -188,6 +211,8 @@ def extract_structured_from_pdf(pdf_bytes, title_hint=None):
         "title": title_hint or "",
         "case_facts": case_facts,
         "decision": decision,
+        "case_mentions": case_mentions,
+        "related_cases": related_cases,
     }
 
 # ------------------------------
@@ -202,6 +227,7 @@ CREATE TABLE IF NOT EXISTS cases (
     docket_number TEXT,
     case_facts TEXT,
     decision TEXT,
+    related_cases TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(docket_number, date)
 );
@@ -213,17 +239,21 @@ def init_db(db_path: str):
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA foreign_keys=ON;")
         conn.execute(DDL)
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(cases)")}
+        if "related_cases" not in cols:
+            conn.execute("ALTER TABLE cases ADD COLUMN related_cases TEXT;")
         conn.commit()
     LOG.info("Database ready at %s", db_path)
 
 def upsert_case(conn, row):
     sql = """
-    INSERT INTO cases (case_name, date, docket_number, case_facts, decision)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO cases (case_name, date, docket_number, case_facts, decision, related_cases)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(docket_number, date) DO UPDATE SET
         case_name=excluded.case_name,
         case_facts=excluded.case_facts,
-        decision=excluded.decision
+        decision=excluded.decision,
+        related_cases=excluded.related_cases
     """
     vals = (
         row["case_name"],
@@ -231,6 +261,7 @@ def upsert_case(conn, row):
         row["docket"],
         row["case_facts"],
         row["decision"],
+        row.get("related_cases", ""),
     )
     conn.execute(sql, vals)
 
@@ -250,11 +281,37 @@ def save_cases(db_path: str, items):
 # Orchestration
 # ------------------------------
 
+def _index_year(url: str) -> str:
+    """Return the slip opinion year suffix (e.g., '24') from the index URL."""
+    path = urlparse(url).path.rstrip("/")
+    return path.split("/")[-1]
+
+def _parse_year_limits(spec: str):
+    """Parse comma-separated YEAR=NUM pairs into a dict like {'24': 5, '23': 2}."""
+    limits = {}
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "=" not in part:
+            raise argparse.ArgumentTypeError(f"Invalid year limit '{part}', expected YEAR=NUM")
+        year, num = part.split("=", 1)
+        year = year.strip()
+        try:
+            limits[year] = int(num)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"Invalid number in year limit '{part}'")
+    return limits
+
 def scrape_and_extract(index_url: str, limit: int | None = None):
     html = fetch_index(index_url)
     rows = parse_rows(html)
+    LOG.info("Found %d case rows in %s", len(rows), index_url)
     if limit is not None:
         rows = rows[:limit]
+        LOG.info("Applying limit %s, processing %d case(s): %s", limit, len(rows), [(r['case_name'], r['docket']) for r in rows])
+    else:
+        LOG.info("Processing all %d case(s): %s", len(rows), [(r['case_name'], r['docket']) for r in rows])
 
     extracted = []
     for r in rows:
@@ -266,13 +323,19 @@ def scrape_and_extract(index_url: str, limit: int | None = None):
             if not parsed:
                 LOG.info("No structured extract for %s", r["case_name"])
                 continue
+            related_cases_str = json.dumps(parsed.get("related_cases", []))
             extracted.append({
                 "case_name": parsed["title"] or r["case_name"],
                 "docket": r["docket"],
                 "date": r["date"],
                 "case_facts": parsed["case_facts"],
                 "decision": parsed["decision"],
+                "related_cases": related_cases_str,
             })
+            if parsed.get("case_mentions"):
+                LOG.info("Case mentions passed along for %s: %s", r["case_name"], parsed["case_mentions"])
+            else:
+                LOG.info("No case mentions extracted for %s", r["case_name"])
         except Exception as e:
             LOG.warning("Error processing %s: %s", r.get("pdf_url", "unknown"), e)
     return extracted
@@ -290,7 +353,13 @@ def main():
         "--per-index-limit",
         type=int,
         default=None,
-        help="Max cases to process per index URL (omit for no limit)",
+        help="Max cases to process per index URL (omit for no limit; overridden by per-year limits)",
+    )
+    ap.add_argument(
+        "--per-year-limit",
+        type=_parse_year_limits,
+        default=None,
+        help="Comma list of YEAR=NUM caps (e.g., 24=5,23=3) to limit cases per slip opinion year",
     )
     args = ap.parse_args()
 
@@ -298,8 +367,13 @@ def main():
 
     all_items = []
     for url in args.index_urls:
-        LOG.info("Scraping index %s", url)
-        items = scrape_and_extract(url, limit=args.per_index_limit)
+        year_key = _index_year(url)
+        year_limit = None
+        if args.per_year_limit:
+            year_limit = args.per_year_limit.get(year_key)
+        limit = year_limit if year_limit is not None else args.per_index_limit
+        LOG.info("Scraping index %s (year=%s, limit=%s)", url, year_key, limit or "all")
+        items = scrape_and_extract(url, limit=limit)
         all_items.extend(items)
 
     save_cases(args.db, all_items)
