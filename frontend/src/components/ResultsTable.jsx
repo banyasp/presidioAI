@@ -1,7 +1,23 @@
-import React from 'react';
-import { Scale, FileText, Gavel } from 'lucide-react';
+import React, { useState } from 'react';
+import { Scale, FileText, Gavel, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ResultsTable = ({ results }) => {
+  // Track expanded state for each result's sections
+  const [expandedSections, setExpandedSections] = useState({});
+
+  const toggleSection = (resultIndex, section) => {
+    const key = `${resultIndex}-${section}`;
+    setExpandedSections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const isExpanded = (resultIndex, section) => {
+    const key = `${resultIndex}-${section}`;
+    return expandedSections[key] || false;
+  };
+
   if (!results || results.length === 0) return null;
 
   return (
@@ -41,8 +57,29 @@ const ResultsTable = ({ results }) => {
                       Case Facts
                     </div>
                   </td>
-                  <td className="p-6 align-top text-gray-300 leading-relaxed border-l border-gray-800">
-                    {result.case_facts["Database Source"]}
+                  <td className="p-6 align-top border-l border-gray-800">
+                    <button
+                      onClick={() => toggleSection(index, 'facts')}
+                      className="w-full flex items-center justify-between text-left text-gray-300 hover:text-white transition-colors group/button"
+                    >
+                      <span className="font-medium">
+                        {isExpanded(index, 'facts') ? 'Hide Details' : 'Show Details'}
+                      </span>
+                      {isExpanded(index, 'facts') ? (
+                        <ChevronUp className="w-5 h-5 text-blue-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-blue-400" />
+                      )}
+                    </button>
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        isExpanded(index, 'facts') ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className="text-gray-300 leading-relaxed">
+                        {result.case_facts["Database Source"]}
+                      </div>
+                    </div>
                   </td>
                 </tr>
 
@@ -54,8 +91,29 @@ const ResultsTable = ({ results }) => {
                       Judgement
                     </div>
                   </td>
-                  <td className="p-6 align-top text-gray-300 leading-relaxed border-l border-gray-800">
-                    {result.judgement["Database Source"]}
+                  <td className="p-6 align-top border-l border-gray-800">
+                    <button
+                      onClick={() => toggleSection(index, 'judgement')}
+                      className="w-full flex items-center justify-between text-left text-gray-300 hover:text-white transition-colors group/button"
+                    >
+                      <span className="font-medium">
+                        {isExpanded(index, 'judgement') ? 'Hide Details' : 'Show Details'}
+                      </span>
+                      {isExpanded(index, 'judgement') ? (
+                        <ChevronUp className="w-5 h-5 text-blue-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-blue-400" />
+                      )}
+                    </button>
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        isExpanded(index, 'judgement') ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className="text-gray-300 leading-relaxed">
+                        {result.judgement["Database Source"]}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               </tbody>
