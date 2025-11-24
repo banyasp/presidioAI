@@ -114,12 +114,10 @@ def find_similar_cases(query_text, top_k=3):
             "case_name": case['case_name'],
             "similarity_score": float(score),
             "case_facts": {
-                "Database Source": case['case_facts'],
-                "Mock Summarizer": f"[MOCK] Summary of facts for {case['case_name']}: {case['case_facts'][:100]}..."
+                "Database Source": case['case_facts']
             },
             "judgement": {
-                "Database Source": case['decision'],
-                "Mock Summarizer": f"[MOCK] Alternative judgement summary for {case['case_name']}."
+                "Database Source": case['decision']
             }
         }
         results.append(result_item)

@@ -26,12 +26,9 @@ const ResultsTable = ({ results }) => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-800 bg-gray-900/80">
-                  <th className="p-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/6">Section</th>
-                  <th className="p-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-5/12 border-l border-gray-800">
+                  <th className="p-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/4">Section</th>
+                  <th className="p-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-3/4 border-l border-gray-800">
                     <span className="text-blue-400">Database Source</span> (Retrieval)
-                  </th>
-                  <th className="p-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-5/12 border-l border-gray-800">
-                    <span className="text-purple-400">Mock Summarizer</span> (Generative)
                   </th>
                 </tr>
               </thead>
@@ -47,9 +44,6 @@ const ResultsTable = ({ results }) => {
                   <td className="p-6 align-top text-gray-300 leading-relaxed border-l border-gray-800">
                     {result.case_facts["Database Source"]}
                   </td>
-                  <td className="p-6 align-top text-gray-300 leading-relaxed border-l border-gray-800 bg-purple-900/5">
-                    {result.case_facts["Mock Summarizer"]}
-                  </td>
                 </tr>
 
                 {/* Judgement Row */}
@@ -62,9 +56,6 @@ const ResultsTable = ({ results }) => {
                   </td>
                   <td className="p-6 align-top text-gray-300 leading-relaxed border-l border-gray-800">
                     {result.judgement["Database Source"]}
-                  </td>
-                  <td className="p-6 align-top text-gray-300 leading-relaxed border-l border-gray-800 bg-purple-900/5">
-                    {result.judgement["Mock Summarizer"]}
                   </td>
                 </tr>
               </tbody>
