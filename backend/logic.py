@@ -101,7 +101,8 @@ def initialize_case_data():
             "docket_number": row['docket_number'],
             "case_facts": row['case_facts'],
             "decision": row['decision'],
-            "date": row['date']
+            "date": row['date'],
+            "related_cases": row['related_cases']
         }
         case_data.append(case_info)
     print(f"Loaded {len(case_data)} cases.")
@@ -138,7 +139,8 @@ def find_similar_cases(query_text, model_key="legal-bert", top_k=3):
             },
             "judgement": {
                 "Database Source": case['decision']
-            }
+            },
+            "related_cases": case['related_cases']
         }
         results.append(result_item)
         

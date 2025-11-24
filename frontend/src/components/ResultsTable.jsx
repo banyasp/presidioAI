@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scale, FileText, Gavel, ChevronDown, ChevronUp } from 'lucide-react';
+import { Scale, FileText, Gavel, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
 
 const ResultsTable = ({ results }) => {
   // Track expanded state for each result's sections
@@ -112,6 +112,59 @@ const ResultsTable = ({ results }) => {
                     >
                       <div className="text-gray-300 leading-relaxed">
                         {result.judgement["Database Source"]}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Case Mentions Row */}
+                <tr className="group hover:bg-gray-800/30 transition-colors">
+                  <td className="p-6 align-top">
+                    <div className="flex items-center gap-2 text-gray-300 font-medium">
+                      <BookOpen className="w-4 h-4" />
+                      Case Mentions
+                    </div>
+                  </td>
+                  <td className="p-6 align-top border-l border-gray-800">
+                    <button
+                      onClick={() => toggleSection(index, 'mentions')}
+                      className="w-full flex items-center justify-between text-left text-gray-300 hover:text-white transition-colors group/button"
+                    >
+                      <span className="font-medium">
+                        {isExpanded(index, 'mentions') ? 'Hide Details' : 'Show Details'}
+                      </span>
+                      {isExpanded(index, 'mentions') ? (
+                        <ChevronUp className="w-5 h-5 text-blue-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-blue-400" />
+                      )}
+                    </button>
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        isExpanded(index, 'mentions') ? 'max-h-none opacity-100 mt-4' : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className="text-gray-300 leading-relaxed">
+                        {result.related_cases ? (
+                          (() => {
+                            try {
+                              const mentions = JSON.parse(result.related_cases);
+                              return mentions.length > 0 ? (
+                                <ul className="list-disc list-inside space-y-1">
+                                  {mentions.map((caseName, idx) => (
+                                    <li key={idx} className="text-sm">{caseName}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-gray-500 italic">No case mentions found</p>
+                              );
+                            } catch (e) {
+                              return <p className="text-gray-500 italic">No case mentions available</p>;
+                            }
+                          })()
+                        ) : (
+                          <p className="text-gray-500 italic">No case mentions available</p>
+                        )}
                       </div>
                     </div>
                   </td>
