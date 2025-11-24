@@ -7,7 +7,7 @@ from . import logic
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Load data and model on startup
-    logic.initialize_data()
+    logic.initialize_case_data()
     yield
     # Clean up if needed
 
@@ -24,6 +24,7 @@ app.add_middleware(
 
 class AnalyzeRequest(BaseModel):
     text: str
+    model: str = "legal-bert"
 
 @app.post("/analyze")
 async def analyze_case(request: AnalyzeRequest):
@@ -31,7 +32,7 @@ async def analyze_case(request: AnalyzeRequest):
         raise HTTPException(status_code=400, detail="Text input is required")
     
     try:
-        results = logic.find_similar_cases(request.text)
+        results = logic.find_similar_cases(request.text, request.model)
         return {"results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

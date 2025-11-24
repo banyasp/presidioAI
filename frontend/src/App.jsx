@@ -9,11 +9,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleAnalyze = async (text) => {
+  const handleAnalyze = async (text, model) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await analyzeCase(text);
+      const data = await analyzeCase(text, model);
       setResults(data.results);
     } catch (err) {
       setError(err.message);

@@ -3,17 +3,32 @@ import { Search, Loader2 } from 'lucide-react';
 
 const InputSection = ({ onAnalyze, isLoading }) => {
   const [text, setText] = useState('');
+  const [model, setModel] = useState('legal-bert');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (text.trim()) {
-      onAnalyze(text);
+      onAnalyze(text, model);
     }
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto mb-12 animate-fade-in">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex justify-between items-center mb-2">
+          <label className="text-sm font-medium text-gray-400">Select AI Model:</label>
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            className="bg-gray-800 text-gray-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 border border-gray-700"
+            disabled={isLoading}
+          >
+            <option value="legal-bert">Legal BERT (Default)</option>
+            <option value="harvard-bert">Harvard BERT (CaseHOLD)</option>
+            <option value="sentence-transformer">Sentence Transformer (MiniLM)</option>
+          </select>
+        </div>
+
         <div className="relative group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl opacity-30 group-hover:opacity-75 transition duration-500 blur"></div>
           <div className="relative bg-gray-900 rounded-xl p-1">

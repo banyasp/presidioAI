@@ -5,46 +5,88 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import os
 
-# Global variables to hold model and data
-tokenizer = None
-model = None
+# Global variables to hold models and data
+# Structure: { model_name: { 'tokenizer': t, 'model': m, 'embeddings': e } }
+loaded_models = {}
 case_data = []
-case_embeddings = None
+
+MODEL_CONFIGS = {
+    "legal-bert": "nlpaueb/legal-bert-base-uncased",
+    "harvard-bert": "casehold/legalbert",
+    "sentence-transformer": "sentence-transformers/all-MiniLM-L6-v2"
+}
 
 def get_db_connection():
-    # Assumes the script is run from the project root or backend folder
-    # We'll try to find the DB relative to this file
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     db_path = os.path.join(base_dir, 'scotus_cases.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
-def load_model():
-    global tokenizer, model
-    print("Loading Legal-BERT model...")
-    tokenizer = AutoTokenizer.from_pretrained("nlpaueb/legal-bert-base-uncased")
-    model = AutoModel.from_pretrained("nlpaueb/legal-bert-base-uncased")
-    print("Model loaded.")
-
-def get_embedding(text):
-    global tokenizer, model
-    if tokenizer is None or model is None:
-        load_model()
+def load_model_resources(model_key):
+    global loaded_models, case_data
     
-    # Truncate to 512 tokens as BERT has a limit
+    if model_key not in MODEL_CONFIGS:
+        raise ValueError(f"Unknown model: {model_key}")
+        
+    if model_key in loaded_models:
+        return loaded_models[model_key]
+        
+    print(f"Loading resources for {model_key}...")
+    model_name = MODEL_CONFIGS[model_key]
+    
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name)
+    
+    # Generate embeddings for all cases using this model
+    if not case_data:
+        initialize_case_data()
+        
+    print(f"Generating embeddings for {model_key}...")
+    embeddings_list = []
+    for case in case_data:
+        text = case['case_facts'] if case['case_facts'] else case['case_name']
+        emb = generate_embedding(text, tokenizer, model)
+        embeddings_list.append(emb)
+        
+    if embeddings_list:
+        embeddings = np.vstack(embeddings_list)
+    else:
+        embeddings = np.array([])
+        
+    loaded_models[model_key] = {
+        'tokenizer': tokenizer,
+        'model': model,
+        'embeddings': embeddings
+    }
+    print(f"Resources loaded for {model_key}.")
+    return loaded_models[model_key]
+
+def generate_embedding(text, tokenizer, model):
+    # Truncate to 512 tokens
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
     with torch.no_grad():
         outputs = model(**inputs)
     
-    # Use the [CLS] token embedding (first token) as the sentence embedding
-    # Alternatively, we could mean pool the last hidden state
+    # Use [CLS] token embedding (first token)
+    # For sentence-transformers, mean pooling is often better, but CLS is standard for BERT
     token_embeddings = outputs.last_hidden_state
+    
+    # Simple CLS strategy for now to keep it consistent across BERT models
     sentence_embedding = token_embeddings[:, 0, :].numpy()
+    
+    # For sentence-transformers specifically, mean pooling is usually preferred
+    # if "sentence-transformers" in model.config._name_or_path:
+    #     attention_mask = inputs['attention_mask']
+    #     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    #     sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
+    #     sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+    #     sentence_embedding = (sum_embeddings / sum_mask).numpy()
+
     return sentence_embedding
 
-def initialize_data():
-    global case_data, case_embeddings
+def initialize_case_data():
+    global case_data
     print("Loading cases from database...")
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -53,19 +95,7 @@ def initialize_data():
     conn.close()
     
     case_data = []
-    embeddings_list = []
-    
-    print(f"Found {len(rows)} cases. Generating embeddings (this may take a moment)...")
-    
     for row in rows:
-        # Combine case facts and decision for a rich representation, or just use facts
-        # Using case_facts for similarity search seems most appropriate for "finding similar cases" based on input facts
-        text_to_embed = row['case_facts'] if row['case_facts'] else ""
-        if not text_to_embed:
-            text_to_embed = row['case_name'] # Fallback
-            
-        emb = get_embedding(text_to_embed)
-        
         case_info = {
             "case_name": row['case_name'],
             "docket_number": row['docket_number'],
@@ -74,25 +104,20 @@ def initialize_data():
             "date": row['date']
         }
         case_data.append(case_info)
-        embeddings_list.append(emb)
-        
-    if embeddings_list:
-        case_embeddings = np.vstack(embeddings_list)
-    else:
-        case_embeddings = np.array([])
-        
-    print("Initialization complete.")
+    print(f"Loaded {len(case_data)} cases.")
 
-def find_similar_cases(query_text, top_k=3):
-    global case_embeddings, case_data
+def find_similar_cases(query_text, model_key="legal-bert", top_k=3):
+    global case_data
     
-    if not case_data:
-        initialize_data()
-        
+    resources = load_model_resources(model_key)
+    tokenizer = resources['tokenizer']
+    model = resources['model']
+    case_embeddings = resources['embeddings']
+    
     if len(case_data) == 0:
         return []
         
-    query_emb = get_embedding(query_text)
+    query_emb = generate_embedding(query_text, tokenizer, model)
     
     # Compute cosine similarity
     similarities = cosine_similarity(query_emb, case_embeddings)
@@ -104,11 +129,6 @@ def find_similar_cases(query_text, top_k=3):
     for idx in top_indices:
         score = similarities[0][idx]
         case = case_data[idx]
-        
-        # Structure the output as requested:
-        # "output sections like case facts and judgement and then withing them wil lbe names of different model that gave output"
-        # Since we only have the DB, we'll use "Database Source" as the primary model
-        # and generate a "Mock Model" for demonstration.
         
         result_item = {
             "case_name": case['case_name'],

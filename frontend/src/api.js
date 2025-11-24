@@ -1,13 +1,13 @@
 const API_URL = 'http://localhost:8000';
 
-export const analyzeCase = async (text) => {
+export const analyzeCase = async (text, model = 'legal-bert') => {
   try {
     const response = await fetch(`${API_URL}/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, model }),
     });
 
     if (!response.ok) {
