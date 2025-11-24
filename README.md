@@ -7,16 +7,26 @@ A modern web application for finding similar legal cases using AI. This applicat
 ### Prerequisites
 - Python 3.13+
 - Node.js 18+
-- `uv` (optional, but recommended for Python dependency management)
+- `uv` package manager for Python
+
+### 0. UV Setup
+
+```bash
+# Install uv
+pip install uv
+
+# Download environment
+uv sync
+
+# Activate environment
+source .venv/bin/activate
+```
 
 ### 1. Backend Setup
 
 The backend is a FastAPI application that handles the logic and database interactions.
 
 ```bash
-# Install dependencies
-pip install fastapi uvicorn scikit-learn numpy torch transformers
-
 # Start the server
 uvicorn backend.main:app --port 8000 --reload
 ```
@@ -35,68 +45,6 @@ npm install
 
 # Start the development server
 npm run dev
-```
-
-Access the application at `http://localhost:5173`.
-
-## 🛠️ Mock API & Customization
-
-The application currently uses a **Mock Model** to demonstrate the "multiple models" feature, as the underlying database (`scotus_cases.db`) only contains a single source of truth for case facts and judgements.
-
-### Where is the Mock Logic?
-
-The logic for generating the response is located in:
-`backend/logic.py`
-
-Specifically, inside the `find_similar_cases` function:
-
-```python
-# backend/logic.py
-
-result_item = {
-    "case_name": case['case_name'],
-    "similarity_score": float(score),
-    "case_facts": {
-        "Database Source": case['case_facts'],
-        # MOCK DATA HERE
-        "Mock Summarizer": f"[MOCK] Summary of facts for {case['case_name']}..."
-    },
-    "judgement": {
-        "Database Source": case['decision'],
-        # MOCK DATA HERE
-        "Mock Summarizer": f"[MOCK] Alternative judgement summary..."
-    }
-}
-```
-
-### How to Replace with Real Models
-
-To integrate real AI models (e.g., GPT-4, Claude, or a custom fine-tuned LLM):
-
-1.  **Open `backend/logic.py`**.
-2.  **Import your model client** (e.g., OpenAI API, HuggingFace pipeline).
-3.  **Locate the `find_similar_cases` function**.
-4.  **Replace the Mock strings** with actual calls to your model.
-
-**Example Replacement:**
-
-```python
-# Pseudo-code example
-from my_ai_models import summarize_facts, generate_judgement
-
-# ... inside find_similar_cases loop ...
-
-result_item = {
-    # ...
-    "case_facts": {
-        "Database Source": case['case_facts'],
-        "AI Summarizer": summarize_facts(case['case_facts']) # Real call
-    },
-    "judgement": {
-        "Database Source": case['decision'],
-        "AI Analysis": generate_judgement(case['decision']) # Real call
-    }
-}
 ```
 
 ## 📂 Project Structure
