@@ -1,8 +1,18 @@
 # Presidio AI - Legal Case Similarity Interface
 
-A modern web application for finding similar legal cases using AI. This application takes a legal text input, finds similar cases from a database using Legal-BERT embeddings, and displays a comparison of case facts and judgements.
+Are you facing a legal challenge? Do you have no idea where to start?
 
-## 🚀 How to Run
+Fear not!
+
+PresidioAI will help you find Supreme Court cases where justices wrestled with situations similar to yours. All you have to do is type in a brief description of your scenario. Our web app will then help you find the precedent you need! 
+
+Don't be lost. Get started today, and learn how the courts have evaluated cases like yours. Use that knowledge to evaluate whether you have a shot & start planning your argument.
+
+*this tool is provided as an academic exercise for informational purposes only.  for legal advice, please seek the counsel of a lawyer.*
+
+Powered by your choice of SBERT, nlpaueb’s LEGAL-BERT, and CaseHold's Legal-BERT.
+
+## How to Run
 
 ### Prerequisites
 - Python 3.13+
@@ -47,7 +57,7 @@ npm install
 npm run dev
 ```
 
-## 📂 Project Structure
+## Project Structure
 
 - `backend/`: FastAPI application and logic.
   - `main.py`: API entry point.
