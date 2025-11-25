@@ -2,13 +2,14 @@ import re
 from typing import List, Set
 
 
-def extract_case_mentions_from_text(document_text: str) -> List[str]:
+def extract_case_mentions_from_text(document_text: str, current_case_name: str = None) -> List[str]:
     """
     Takes the raw text of a legal document and extracts a unique, sorted
     list of all potential case names mentioned (e.g., 'Marbury v. Madison').
 
     Args:
         document_text: The full text of the legal document as a string.
+        current_case_name: Optional name of the current case to filter out self-citations.
 
     Returns:
         A sorted list of unique potential case names.
@@ -36,8 +37,6 @@ def extract_case_mentions_from_text(document_text: str) -> List[str]:
 
     # --- Step 2: Reconstruct, Clean, and Deduplicate ---
     mentioned_cases: Set[str] = set()
-    # Placeholder for the case being analyzed itself (to avoid self-citation)
-    CURRENT_CASE_NAME = "GIDEON V. WAINWRIGHT"
     EXCLUSION_PREFIXES = re.compile(r"^(In|The|A)\s+", re.IGNORECASE)
 
     for plaintiff, defendant in all_name_parts:
@@ -55,8 +54,10 @@ def extract_case_mentions_from_text(document_text: str) -> List[str]:
         cleaned_name = EXCLUSION_PREFIXES.sub("", cleaned_name)
 
         # 4. Filter the current case being analyzed (if defined)
-        if cleaned_name.upper() != CURRENT_CASE_NAME:
-            mentioned_cases.add(cleaned_name)
+        if current_case_name and cleaned_name.upper() == current_case_name.upper():
+            continue
+        
+        mentioned_cases.add(cleaned_name)
 
     # Convert the set of unique case names back to a sorted list
     return sorted(list(mentioned_cases))

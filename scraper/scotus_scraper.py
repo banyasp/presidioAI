@@ -193,16 +193,24 @@ def extract_structured_from_pdf(pdf_bytes, title_hint=None):
     paras = [p.strip() for p in re.split(r"\n\s*\n", region) if p.strip()]
     decision = _clean(paras[0]) if paras else ""
 
-    opinion_tail = after_held[m_op.end():] if m_op else ""
+    # Extract case mentions from opinion text
+    # For regular opinions: extract from text after "delivered the opinion of the Court"
+    # For per curiam decisions: extract from full text after "Held:"
     case_mentions = []
     related_cases = []
-    if opinion_tail:
+    if m_op:
+        # Regular opinion - extract from opinion text
+        opinion_tail = after_held[m_op.end():]
         LOG.info("Passing opinion text to case_mention_extractor for %s", title_hint or "")
-        case_mentions = extract_case_mentions_from_text(opinion_tail)
+        case_mentions = extract_case_mentions_from_text(opinion_tail, current_case_name=title_hint)
         LOG.info("Found %d case mention(s) in %s: %s", len(case_mentions), title_hint or "", case_mentions)
         related_cases = case_mentions
     else:
-        LOG.info("No opinion tail found after 'delivered the opinion of the Court' for %s", title_hint or "")
+        # Per curiam or other format - extract from full text after Held
+        LOG.info("No 'delivered the opinion of the Court' found (likely per curiam). Extracting from full text for %s", title_hint or "")
+        case_mentions = extract_case_mentions_from_text(after_held, current_case_name=title_hint)
+        LOG.info("Found %d case mention(s) in %s: %s", len(case_mentions), title_hint or "", case_mentions)
+        related_cases = case_mentions
 
     if not case_facts or not decision:
         return None
