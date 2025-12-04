@@ -128,56 +128,136 @@ Legal-BERT models appear to **over-abstract** legal concepts, losing factual gro
 
 ---
 
-## Concrete Examples
+## Concrete Examples with Model Outputs
 
-Let's examine specific cases to see how models perform on both extractive and generative queries.
+Let's examine specific cases to see what each model actually returned. Results categorized as:
+- **✓✓ Source**: The original source case
+- **✓ Cited**: Cases cited in the source case's opinion (relevant)
+- **✗ Unrelated**: Cases not relevant to the query
 
-### Example: Trump v. CASA, Inc.
+**Note**: P@5 = 0.552 is an AVERAGE across all queries. Individual queries vary - some retrieve more cited cases than others.
 
-#### Extractive Query (First 150 words of case facts)
+### Example 1: Trump v. CASA, Inc.
 
-> "TRUMP, PRESIDENT OF THE UNITED STATES, et al , et al Plaintiffs (respondents here)—individuals, organizations, and States—fled three separate suits to enjoin the implementation and enforcement of President Trump's Executive Order No See Protecting th..."
+#### Extractive Query (Query ID: 346)
+> "TRUMP, PRESIDENT OF THE UNITED STATES, et al , et al Plaintiffs (respondents here)—individuals, organizations, and States—fled three separate suits to enjoin the implementation and enforcement of Pres..."
+> 
+> *Source: Trump v. CASA, Inc.*
 
-#### Generative Query (LLM-generated natural language question)
+**sentence-transformer top-10**:
+| Rank | Case ID | Case Name | Relevance |
+|------|---------|-----------|-----------|
+| 1 | 1 | Trump v. CASA, Inc. | ✓✓ Source |
+| 2 | 112 | Trump v. Anderson | ✗ Unrelated |
+| 3 | 313 | Department of Homeland Security v. Regents of Univ. of Cal. | ✗ Unrelated |
+| 4 | 173 | Biden v. Texas | ✗ Unrelated |
+| 5 | 300 | Trump v. Vance | ✗ Unrelated |
+| 6 | 289 | Trump v. New York | ✗ Unrelated |
+| 7 | 199 | Garland v. Gonzalez | ✗ Unrelated |
+| 8 | 240 | Johnson v. Guzman Chavez | ✗ Unrelated |
+| 9 | 299 | Trump v. Mazars USA, LLP | ✗ Unrelated |
+| 10 | 63 | Trump v. United States | ✓ Cited |
 
-> "Here is a natural question that someone might search for based on this legal case summary:
+**legal-bert top-10**: All unrelated cases. Source found at rank 43.
 
-"What is the impact of President Trump's Executive Order 14160 on the citizenship status of individuals born in the United States, and do the federal courts have the authority to issue universal injunctions against its implementation?""
+**harvard-bert top-10**: 1 cited case (*Tandon v. Newsom* at rank 2), 9 unrelated. Source at rank 73.
 
-**Analysis**:
-- **Extractive query**: Tests if models can recognize verbatim case text
-- **Generative query**: Tests if models can understand the legal question and match to relevant case
-- **Expected result**: Both queries should return "Trump v. CASA, Inc." at rank 1
-- **Sentence-transformer**: Likely succeeds on both (82% P@1 overall)
-- **Legal-BERT models**: Likely fail on both (1%-2% P@1 overall)
+**Analysis**: Sentence-transformer finds source at rank 1, first cited case at rank 10. Legal-BERT returns entirely unrelated cases in top-10.
 
-### Additional Generative Query Examples
+---
 
-#### Example 2: Kennedy v. Braidwood Management, Inc.
+### Example 2: Kennedy v. Braidwood Management, Inc.
 
-**Query**: "Does the Preventive Services Task Force have the authority to mandate coverage for certain healthcare services without Congressional approval?"
+#### Generative Query (Query ID: 1002)
+> "Does the Preventive Services Task Force have the authority to mandate coverage for certain healthcare services without Congressional approval?"
 
-**Expected behavior**:
-- Sentence-transformer: Should find "Kennedy v. Braidwood Management, Inc." through semantic matching
-- Legal-BERT: May return unrelated cases due to over-abstraction
+**sentence-transformer top-10**:
+| Rank | Case ID | Case Name | Relevance |
+|------|---------|-----------|-----------|
+| 1 | 2 | Kennedy v. Braidwood Management, Inc. | ✓✓ Source |
+| 2 | 327 | Maine Community Health Options v. United States | ✗ Unrelated |
+| 3 | 180 | Becerra v. Empire Health Foundation | ✗ Unrelated |
+| 4 | 7 | Medina v. Planned Parenthood South Atlantic | ✗ Unrelated |
+| 5 | 192 | American Hospital Assn. v. Becerra | ✗ Unrelated |
+| 6 | 66 | Loper Bright Enterprises v. Raimondo | ✓ Cited |
+| 7 | 186 | Marietta Memorial Hospital Employee Health Benefit Plan v. DaVita Inc. | ✗ Unrelated |
+| 8 | 229 | NFIB v. OSHA | ✗ Unrelated |
+| 9 | 327 | Corner Post, Inc. v. Board of Governors of the Federal Reserve | ✗ Unrelated |
+| 10 | 339 | Seila Law LLC v. Consumer Financial Protection Bureau | ✓ Cited |
 
-#### Example 3: Free Speech Coalition, Inc. v. Paxton
+**legal-bert top-10**: 1 cited case (*Loper Bright* at rank 1), 9 unrelated. Source at rank 71.
 
-**Query**: "Can states require age verification for websites hosting sexually explicit content without violating the First Amendment?"
+**harvard-bert top-10**: All unrelated. Source not in top-100.
 
-**Expected behavior**:
-- Sentence-transformer: Should find "Free Speech Coalition, Inc. v. Paxton" through semantic matching
-- Legal-BERT: May return unrelated cases due to over-abstraction
+**Analysis**: Sentence-transformer finds source + 2 cited cases in top-10 (3/10 = 30% precision). Legal-BERT ranks a cited case higher than the source itself.
 
-#### Example 4: Trump v. CASA, Inc.
+---
 
-**Query**: "Here is a natural question that someone might search for based on this legal case summary:
+### Example 3: Loper Bright Enterprises v. Raimondo
 
-"What is the impact of President Trump's Executive Order 14160 on the citizenship status of individuals born in the United States, and do the federal courts have the authority to issue universal injunctions against its implementation?""
+#### Extractive Query (Query ID: 411)
 
-**Expected behavior**:
-- Sentence-transformer: Should find "Trump v. CASA, Inc." through semantic matching
-- Legal-BERT: May return unrelated cases due to over-abstraction
+**sentence-transformer top-10**:
+| Rank | Case ID | Case Name | Relevance |
+|------|---------|-----------|-----------|
+| 1 | 66 | Loper Bright Enterprises v. Raimondo | ✓✓ Source |
+| 2 | 158 | Securities and Exchange Commission v. Jarkesy | ✗ Unrelated |
+| 3 | 253 | United States v. Arthrex, Inc. | ✓ Cited |
+| 4 | 14 | Corner Post, Inc. v. Board of Governors of Federal Reserve | ✓ Cited |
+| 5 | 2 | Kennedy v. Braidwood Management, Inc. | ✓ Cited |
+| 6 | 180 | Becerra v. Empire Health Foundation | ✗ Unrelated |
+| 7 | 28 | Catholic Charities Bureau v. Wisconsin Labor | ✓ Cited |
+| 8 | 87 | Garland v. Cargill | ✗ Unrelated |
+| 9 | 229 | NFIB v. OSHA | ✗ Unrelated |
+| 10 | 192 | American Hospital Assn. v. Becerra | ✗ Unrelated |
+
+**Analysis**: **This query shows the high P@5!** Sentence-transformer retrieves source + 4 cited cases in top-10 (5/10 = 50% precision, 3/5 = 60% P@5). This is why the average P@5 is 55.2%.
+
+**legal-bert**: All unrelated in top-10.
+
+**harvard-bert**: 2 cited cases (*Arthrex*, *Corner Post*) but source at rank 62.
+
+---
+
+### Example 4: Trump v. Anderson
+
+#### Generative Query (Query ID: 1067)
+
+**sentence-transformer top-10**:
+| Rank | Case ID | Case Name | Relevance |
+|------|---------|-----------|-----------|
+| 1 | 112 | Trump v. Anderson | ✓✓ Source |
+| 2 | 237 | Moore v. Circosta | ✓ Cited |
+| 3 | 315 | RNC v. DNC | ✓ Cited |
+| 4 | 1 | Trump v. CASA, Inc. | ✗ Unrelated |
+| 5 | 173 | Biden v. Texas | ✗ Unrelated |
+| 6 | 125 | United States v. Hansen | ✗ Unrelated |
+| 7 | 93 | Gonzalez v. Trevino | ✗ Unrelated |
+| 8 | 243 | Lombardo v. St. Louis | ✗ Unrelated |
+| 9 | 300 | Trump v. Vance | ✗ Unrelated |
+| 10 | 240 | Johnson v. Guzman Chavez | ✗ Unrelated |
+
+**Analysis**: Sentence-transformer gets source + 2 cited cases in top-5 (3/5 = 60% P@5).
+
+**legal-bert**: All unrelated. Source at rank 31.
+
+**harvard-bert**: 1 cited case in top-10. Source at rank 84.
+
+---
+
+## Key Observations from Examples
+
+1. **Sentence-transformer consistently finds source at rank 1** for both extractive and generative queries
+
+2. **Cited case retrieval varies by query**: 
+   - Trump v. CASA: 1 cited case in top-10 (10% P@10)
+   - Kennedy v. Braidwood: 2 cited cases in top-10 (30% P@10)
+   - Loper Bright: 4 cited cases in top-10 (50% P@10)
+   - Trump v. Anderson: 2 cited cases in top-10 (30% P@10)
+
+3. **Legal-BERT pathological behavior**: Returns entirely unrelated cases OR ranks cited cases higher than source
+
+4. **Harvard-BERT mixed results**: Sometimes finds cited cases but cannot find source case
 
 ---
 
