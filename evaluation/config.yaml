@@ -1,0 +1,68 @@
+# Evaluation Framework Configuration
+
+evaluation:
+  # Models to evaluate
+  models:
+    - legal-bert
+    - harvard-bert
+    - sentence-transformer
+
+  # K values for metrics (Precision@k, NDCG@k, Recall@k)
+  k_values: [1, 3, 5, 10, 20]
+
+  # Number of results to retrieve per query
+  top_k_retrieval: 100
+
+  # Enable caching to speed up re-runs
+  cache_enabled: true
+
+  # Cache directory
+  cache_dir: "evaluation_results/cache"
+
+query_generation:
+  # Query generation methods
+  methods:
+    - extractive  # Rule-based extraction
+    - generative  # LLM-based generation
+
+  # LLM model for generative queries (Ollama)
+  llm_model: "llama3.2:1b"
+
+  # Number of queries to generate per case
+  queries_per_case: 2
+
+ground_truth:
+  # Relevance score for source case (highest)
+  source_relevance: 2
+
+  # Relevance score for cited cases
+  citation_relevance: 1
+
+  # Fuzzy matching threshold for case name matching (0-1)
+  match_threshold: 0.9
+
+metrics:
+  # Logarithm base for DCG/NDCG calculation
+  ndcg_base: 2
+
+  # Minimum relevance score to consider a result "relevant" for MRR/Recall
+  min_relevance: 1
+
+database:
+  # Default database path
+  db_path: "scotus_cases.db"
+
+  # Save evaluation results to database
+  save_results: true
+
+reporting:
+  # Output directory for reports
+  output_dir: "evaluation_results/reports"
+
+  # Report formats to generate
+  formats:
+    - text
+    - markdown
+
+  # NDCG threshold for error analysis (queries below this are flagged)
+  error_analysis_threshold: 0.3
